@@ -1,9 +1,13 @@
 package com.bolsadeideas.springboot.backend.apirest.controllers;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,9 +35,29 @@ public class ClienteRestController {
 		return this.clienteService.findAll();
 	}
 
+	/**
+	 * <?> , será genérico, ya que podría retornar un objeto tipo Cliente, un string
+	 * conteniendo el mensaje de error, etc.
+	 */
 	@GetMapping("/clientes/{id}")
-	public Cliente show(@PathVariable Long id) {
-		return this.clienteService.findById(id);
+	public ResponseEntity<?> show(@PathVariable Long id) {
+		Cliente cliente = null;
+		Map<String, Object> response = new HashMap<>();
+
+		try {
+			cliente = this.clienteService.findById(id);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error al realizar la consulta en la BD");
+			response.put("error", e.getMessage().concat(" ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+		if (cliente == null) {
+			response.put("mensaje", "El cliente con ID: ".concat(id.toString()).concat(" no existe!"));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
+		}
+
+		return new ResponseEntity<Cliente>(cliente, HttpStatus.OK);
 	}
 
 	// @RequestBody, el objeto cliente es enviado dentro del cuerpo del request
@@ -61,4 +85,4 @@ public class ClienteRestController {
 		this.clienteService.delete(id);
 	}
 
-}
+}// 31. Angular Manejo de errores en Backend Spring
