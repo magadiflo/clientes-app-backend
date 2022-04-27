@@ -81,15 +81,40 @@ public class ClienteRestController {
 	}
 
 	@PutMapping("/clientes/{id}")
-	@ResponseStatus(HttpStatus.CREATED)
-	public Cliente update(@RequestBody Cliente cliente, @PathVariable Long id) {
-		Cliente clienteActual = this.clienteService.findById(id);
+	public ResponseEntity<?> update(@RequestBody Cliente cliente, @PathVariable Long id) {
+		Cliente clienteActual = null;
+		Cliente clienteUpdated = null;
+		Map<String, Object> response = new HashMap<>();
 
-		clienteActual.setNombre(cliente.getNombre());
-		clienteActual.setApellido(cliente.getApellido());
-		clienteActual.setEmail(cliente.getEmail());
+		try {
+			clienteActual = this.clienteService.findById(id);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error al buscar al cliente en la BD para ser actualizado");
+			response.put("error", e.getMessage().concat(" ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
 
-		return this.clienteService.save(clienteActual);
+		if (clienteActual == null) {
+			response.put("mensaje", "No se pudo editar. El ID: ".concat(id.toString()).concat(" no existe!"));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_FOUND);
+		}
+
+		try {
+			clienteActual.setNombre(cliente.getNombre());
+			clienteActual.setApellido(cliente.getApellido());
+			clienteActual.setEmail(cliente.getEmail());
+
+			clienteUpdated = this.clienteService.save(clienteActual);
+		} catch (DataAccessException e) {
+			response.put("mensaje", "Error al actualizar en la BD.");
+			response.put("error", e.getMessage().concat(" ").concat(e.getMostSpecificCause().getMessage()));
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+
+		response.put("mensaje", "Datos del cliente actualizados con éxito!");
+		response.put("cliente", clienteUpdated);
+
+		return new ResponseEntity<Map<String, Object>>(response, HttpStatus.CREATED);
 	}
 
 	@DeleteMapping("/clientes/{id}")
